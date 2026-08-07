@@ -2,1144 +2,1336 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MaxWalker</title>
-    
-    <link rel="icon" href="icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="icon.png">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MaxWalker Firebase</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- LEAFLET MAPS CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f9ff; color: #1e293b; }
-        .card { background: white; border-radius: 20px; box-shadow: 0 4px 15px -2px rgba(186, 230, 253, 0.4); }
-        .btn-primary { background-color: #38bdf8; transition: all 0.2s ease; color: white; font-weight: 600; }
-        .btn-primary:hover { background-color: #0ea5e9; transform: translateY(-1px); }
-        .tab-active { border-bottom: 3px solid #38bdf8; color: #0ea5e9; font-weight: 700; }
-        .hidden { display: none !important; }
-        input:focus, select:focus { border-color: #7dd3fc; ring: 3px; ring-color: #e0f2fe; outline: none; }
-        .loader { border-top-color: #38bdf8; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Cronómetro fuente monoespaciada */
-        .font-timer { font-variant-numeric: tabular-nums; letter-spacing: -1px; }
-        input[type="time"], input[type="date"] { -webkit-appearance: none; }
-        .leaflet-container { z-index: 10 !important; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Apple Liquid Glass Effect */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Modal Background */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
+        /* Timer Circle Animation */
+        .timer-circle {
+            transition: all 0.5s ease;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 0 30px rgba(99, 102, 241, 0.2);
+        }
+        .timer-active {
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.3), 0 0 50px rgba(99, 102, 241, 0.6);
+            border-color: #6366f1;
+            animation: pulse-border 2s infinite;
+        }
+        .timer-finished {
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.3), 0 0 30px rgba(16, 185, 129, 0.4);
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .timer-flagged {
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5), 0 0 40px rgba(239, 68, 68, 0.5);
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+
+        .flagged-walk {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-color: rgba(239, 68, 68, 0.3) !important;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-slate-50">
-
-    <!-- OVERLAY CARGA -->
-    <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 text-center">
-        <div id="loader-spinner" class="loader w-10 h-10 border-4 border-slate-100 rounded-full mb-4"></div>
-        <p id="loader-text" class="text-sky-500 font-medium text-xs tracking-widest uppercase">Iniciando...</p>
-        
-        <div id="connection-error" class="hidden flex flex-col items-center mt-4">
-            <span class="text-3xl mb-2">📡</span>
-            <p id="connection-error-msg" class="text-red-400 text-xs max-w-xs mx-auto">Error de base de datos.</p>
-        </div>
-    </div>
-
-    <!-- MODAL CONFIRMACIÓN -->
-    <div id="custom-modal" class="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[100] flex items-center justify-center px-6 hidden">
-        <div class="card p-6 w-full max-w-xs text-center bg-white shadow-2xl transform transition-all scale-100">
-            <h3 id="modal-title" class="font-bold text-lg text-slate-800 mb-2">Confirmar</h3>
-            <p id="modal-msg" class="text-sm text-slate-500 mb-6 leading-tight"></p>
-            <div class="flex gap-3 justify-center">
-                <button id="btn-modal-cancel" class="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 font-bold text-xs">Cancelar</button>
-                <button id="btn-modal-confirm" class="flex-1 py-3 rounded-xl bg-red-400 text-white font-bold text-xs shadow-lg shadow-red-200">Confirmar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL VISOR DE MAPA -->
-    <div id="route-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center px-4 hidden">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col h-[70vh]">
-            <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-white z-20">
-                <h3 class="font-bold text-sky-900 flex items-center gap-2"><span class="text-xl">📍</span> Ruta del paseo</h3>
-                <button id="close-map-btn" class="bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-400 w-8 h-8 rounded-full font-bold text-lg flex items-center justify-center transition-colors">&times;</button>
-            </div>
-            <div id="map-view" class="flex-1 w-full relative z-10 bg-slate-100"></div>
-            <div class="p-3 bg-sky-50 text-[10px] text-sky-600 font-medium text-center uppercase tracking-widest border-t border-sky-100 z-20">
-                Rastreo GPS de MaxWalker
-            </div>
-        </div>
-    </div>
-
-    <!-- SETUP INICIAL -->
-    <div id="setup-screen" class="min-h-screen flex items-center justify-center px-6 hidden">
-        <div class="card p-6 w-full max-w-sm border border-sky-50">
-            <h1 class="text-xl font-bold text-center mb-2 text-sky-900">Bienvenido</h1>
-            <p class="text-center text-slate-400 mb-6 text-xs">Crea la primera cuenta de administrador.</p>
-            <form id="setupForm" class="space-y-4">
-                <input type="text" id="setupUser" placeholder="Usuario" required class="w-full p-3 border border-sky-100 rounded-xl bg-sky-50/20 text-sm">
-                <input type="password" id="setupPass" placeholder="Contraseña" required class="w-full p-3 border border-sky-100 rounded-xl bg-sky-50/20 text-sm">
-                <button type="submit" class="w-full btn-primary py-3 rounded-xl shadow-lg shadow-sky-100 text-sm">Crear Cuenta</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center px-6 hidden">
-        <div class="card p-6 w-full max-w-sm border border-sky-50">
-            <div class="text-center mb-6">
-                <!-- LOGO PERSONALIZADO -->
-                <img src="icon.png" alt="Logo Perro" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=200&q=80';" class="w-24 h-24 mx-auto object-cover rounded-full shadow-lg border-4 border-sky-50">
-            </div>
-            <h1 class="text-2xl font-bold text-center mb-1 text-sky-900">MaxWalker</h1>
-            <p class="text-center text-sky-400 mb-6 text-xs font-medium uppercase tracking-wider">Gestión de Paseos</p>
-            <form id="loginForm" class="space-y-3">
-                <input type="text" id="loginUser" placeholder="Usuario" required class="w-full p-3 border border-sky-100 rounded-xl bg-sky-50/20 text-sm font-medium text-slate-700 placeholder:text-slate-400">
-                <input type="password" id="loginPass" placeholder="Contraseña" class="w-full p-3 border border-sky-100 rounded-xl bg-sky-50/20 text-sm font-medium text-slate-700 placeholder:text-slate-400">
-                <button type="submit" class="w-full btn-primary py-3.5 rounded-xl shadow-lg shadow-sky-100 mt-2 text-sm">Entrar</button>
-            </form>
-            <div id="loginError" class="mt-4 text-red-400 text-center text-xs hidden font-bold animate-pulse">⚠️ Credenciales incorrectas</div>
-        </div>
-    </div>
-
-    <!-- MODAL CONFIGURAR CONTRASEÑA -->
-    <div id="password-setup-modal" class="fixed inset-0 bg-sky-900/40 backdrop-blur-sm z-50 flex items-center justify-center px-6 hidden">
-        <div class="card p-6 w-full max-w-sm text-center">
-            <h3 class="font-bold text-lg text-sky-900 mb-2">Actualizar Clave</h3>
-            <p class="text-xs text-slate-500 mb-6">Tu cuenta requiere una nueva contraseña.</p>
-            <input type="password" id="newAccountPass" placeholder="Nueva contraseña" class="w-full p-3 border border-sky-100 rounded-xl bg-sky-50/20 mb-4 text-sm">
-            <button id="savePassBtn" class="w-full bg-sky-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg">Guardar</button>
-        </div>
-    </div>
-
-    <!-- APP PRINCIPAL -->
-    <div id="app-content" class="hidden flex flex-col h-screen">
-        <nav class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-sky-50 shrink-0">
-            <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center text-[10px] font-bold uppercase tracking-wide">
-                <div class="flex gap-4 sm:gap-6">
-                    <button id="tab-register" class="pb-1 tab-active" data-tab="register">Registrar</button>
-                    <button id="tab-history" class="pb-1 text-slate-400" data-tab="history">Historial</button>
-                    <button id="tab-stats" class="pb-1 text-slate-400" data-tab="stats">Resumen</button>
-                    <button id="tab-admin" class="pb-1 text-slate-400 hidden" data-tab="admin">Admin</button>
-                </div>
-                <button id="logoutBtn" class="text-red-300 hover:text-red-400">Salir</button>
-            </div>
-        </nav>
-
-        <main class="flex-1 overflow-y-auto max-w-md mx-auto w-full px-4 pt-4 pb-20">
-            <!-- SECCIÓN REGISTRO -->
-            <section id="section-register" class="space-y-4">
-                <div class="card p-5 border border-sky-50">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 id="formTitle" class="text-base font-bold text-sky-900 flex items-center gap-2">
-                            <span>🐾</span> Paseo Activo
-                        </h2>
-                        <button id="cancelEditBtn" class="hidden text-[10px] bg-red-50 text-red-400 font-bold uppercase px-2 py-1 rounded-lg">Cancelar</button>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-[10px] uppercase font-bold text-sky-400 mb-1.5 ml-1">¿Quién pasea?</label>
-                        <!-- Selector múltiple (Chips) -->
-                        <div id="walkersList" class="flex flex-wrap gap-2 mt-2 mb-4">
-                            <!-- Los botones se generarán aquí -->
-                        </div>
-                    </div>
-
-                    <!-- MODO CRONÓMETRO GIGANTE -->
-                    <div id="view-timer" class="mt-8 mb-4 flex flex-col items-center">
-                        <button id="btn-circle-timer" class="relative w-48 h-48 rounded-full bg-gradient-to-tr from-sky-400 to-sky-300 text-white shadow-[0_10px_40px_-10px_rgba(56,189,248,0.6)] flex flex-col items-center justify-center transition-transform transform hover:scale-105 active:scale-95 outline-none">
-                            <span id="circle-icon" class="text-4xl mb-1">▶️</span>
-                            <span id="circle-time" class="text-5xl font-black font-timer hidden tracking-tighter drop-shadow-md">00:00</span>
-                            <span id="circle-text" class="font-bold tracking-widest uppercase text-xs mt-1 opacity-90">Iniciar</span>
-                        </button>
-                        
-                        <!-- CASILLA DE GUARDAR RUTA -->
-                        <div id="route-toggle-container" class="mt-6 flex flex-col items-center w-full">
-                            <div class="flex items-center justify-center gap-2 bg-sky-50 px-4 py-2.5 rounded-full border border-sky-100 cursor-pointer hover:bg-sky-100 transition-colors">
-                                <input type="checkbox" id="record-route-toggle" class="w-4 h-4 text-sky-500 rounded border-sky-300 bg-white cursor-pointer accent-sky-500">
-                                <label for="record-route-toggle" class="text-[10px] font-bold text-sky-900 uppercase tracking-widest cursor-pointer select-none">Guardar ruta GPS</label>
-                            </div>
-                            
-                            <div id="gps-warning-inline" class="mt-3 bg-orange-50 border border-orange-200 text-orange-700 text-[10px] p-3 rounded-xl hidden text-center w-full max-w-[280px]">
-                                <strong>⚠️ Atención:</strong> Para que la ruta se guarde bien, <strong>no apagues la pantalla</strong> ni salgas de la aplicación durante el paseo.
-                            </div>
-                        </div>
-
-                        <!-- INDICADOR GPS -->
-                        <div id="gps-status" class="mt-4 text-[10px] font-bold text-slate-400 flex items-center gap-1 opacity-0 transition-opacity hidden">
-                            <span class="animate-pulse text-sky-500 text-xs">📍</span> Paseo global en curso...
-                        </div>
-                    </div>
-
-                    <!-- BOTÓN TOGGLE MANUAL (Solo para Admins) -->
-                    <div id="admin-manual-toggle" class="text-center mt-2 mb-2 hidden">
-                        <button id="btn-toggle-mode" type="button" class="text-[10px] font-bold text-slate-400 uppercase hover:text-sky-500 underline decoration-slate-200 underline-offset-4">
-                            Añadir manualmente
-                        </button>
-                    </div>
-
-                    <!-- MODO EDICIÓN / MANUAL (Oculto por defecto) -->
-                    <form id="walkForm" class="hidden mt-4 space-y-4">
-                        <input type="hidden" id="editWalkId">
-                        
-                        <div>
-                            <label class="block text-[10px] uppercase font-bold text-sky-400 mb-1.5 ml-1">Fecha</label>
-                            <input type="date" id="walkDate" class="w-full p-3.5 border border-sky-100 rounded-xl bg-sky-50/30 font-bold text-slate-700 text-sm outline-none focus:ring-2 focus:ring-sky-100">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] uppercase font-bold text-sky-400 mb-1.5 ml-1">Salida</label>
-                                <input type="time" id="startTime" class="w-full p-3.5 border border-sky-100 rounded-xl bg-sky-50/30 font-bold text-slate-700 text-sm text-center outline-none focus:ring-2 focus:ring-sky-100">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] uppercase font-bold text-sky-400 mb-1.5 ml-1">Llegada</label>
-                                <input type="time" id="endTime" class="w-full p-3.5 border border-sky-100 rounded-xl bg-sky-50/30 font-bold text-slate-700 text-sm text-center outline-none focus:ring-2 focus:ring-sky-100">
-                            </div>
-                        </div>
-                        <button type="submit" id="submitWalkBtn" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl shadow-lg text-sm flex justify-center items-center gap-2">
-                            <span>🔄</span> Guardar Manual
-                        </button>
-                    </form>
-                </div>
-                
-                <div class="text-center text-[10px] text-slate-300 font-medium">
-                    Gestión de paseos de Max 🐾
-                </div>
-            </section>
-
-            <!-- SECCIÓN HISTORIAL -->
-            <section id="section-history" class="hidden space-y-3">
-                <div id="historyList" class="space-y-3 pb-4"></div>
-            </section>
-
-            <!-- SECCIÓN STATS -->
-            <section id="section-stats" class="hidden space-y-4">
-                <div class="card p-4">
-                    <h3 class="text-[10px] font-bold text-sky-400 uppercase mb-3 text-center tracking-widest">Paseos Realizados</h3>
-                    <div class="h-48">
-                        <canvas id="chartWalks"></canvas>
-                    </div>
-                </div>
-                <div class="card p-4">
-                    <h3 class="text-[10px] font-bold text-sky-400 uppercase mb-3 text-center tracking-widest">Tiempo Total</h3>
-                    <div class="h-48">
-                        <canvas id="chartTime"></canvas>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECCIÓN ADMIN -->
-            <section id="section-admin" class="hidden space-y-4">
-                <div class="card p-5 border border-sky-50">
-                    <h2 class="text-sm font-bold mb-4 text-sky-900 uppercase tracking-wide">Nuevo Usuario</h2>
-                    <form id="userForm" class="space-y-3">
-                        <div class="bg-sky-50/50 p-3 rounded-xl border border-sky-100 space-y-2">
-                            <input type="text" id="userName" placeholder="Nombre" required class="w-full p-2 rounded-lg border-white bg-white text-xs font-medium focus:ring-0">
-                            <input type="password" id="userPass" placeholder="Clave (Opcional)" class="w-full p-2 rounded-lg border-white bg-white text-xs font-medium focus:ring-0">
-                            <div class="flex items-center gap-2 pt-1">
-                                <input type="checkbox" id="userIsAdmin" class="w-4 h-4 text-sky-500 rounded border-sky-200 bg-white">
-                                <label for="userIsAdmin" class="text-[10px] font-bold text-slate-500 uppercase">Es Administrador</label>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-sky-500 text-white py-3 rounded-xl text-xs font-bold shadow-md hover:bg-sky-600">Añadir Usuario</button>
-                    </form>
-                </div>
-                
-                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Usuarios Activos</div>
-                <div id="usersList" class="space-y-2 pb-4"></div>
-            </section>
-        </main>
-    </div>
+<body>
+    <div id="app" class="min-h-screen"></div>
+    <div id="modal-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =========================================================================
-        // TUS LLAVES DE FIREBASE
-        // =========================================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyAyLqdIbmEZeLk6hFIKXVWHhgA37vgX9sw",
-            authDomain: "dogwalker-pl.firebaseapp.com",
-            projectId: "dogwalker-pl",
-            storageBucket: "dogwalker-pl.firebasestorage.app",
-            messagingSenderId: "531303785074",
-            appId: "1:531303785074:web:ece0891cfebc06ac8218eb",
-            measurementId: "G-MJPHBFNK54"
+        // Variables de Firebase
+        let app, auth, db, stateDocRef;
+        let isDbReady = false;
+
+        // State Management
+        let state = {
+            users: [],
+            currentUser: null,
+            view: 'login', // login, app
+            activeTab: 'calendar', // calendar, stats, admin
+            currentDate: new Date(),
+            walks: {}, // { "YYYY-MM-DD": [walks] }
+            defaultSchedule: {
+                // 1: Mon, 2: Tue, 3: Wed, 4: Thu, 5: Fri, 6: Sat, 0: Sun
+                1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 0: []
+            },
+            notifications: [],
+            swapRequests: [],
+            
+            // UI States
+            activeTimerId: null,
+            activeTimerStart: null,
+            timerInterval: null
         };
 
-        let app, auth, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        } catch (e) {
-            console.error("Error iniciando Firebase:", e);
-            document.getElementById('loader-text').innerText = "Error local";
-        }
+        let loginState = {
+            step: 'user', // 'user' o 'pin'
+            username: '',
+            pin: '',
+            error: false
+        };
 
-        // 🟢 Apuntamos a la base de datos original
-        const dbAppId = 'dogwalker-pl-main-db';
+        const MIN_SHORT_WALK = 10 * 60; // 10 minutes in seconds
+        const MIN_LONG_WALK = 60 * 60; // 60 minutes in seconds
 
-        // VARIABLES GLOBALES
-        let currentUser = null;
-        let allUsers = [];
-        let allWalks = [];
-        let charts = {};
-        let pendingUser = null;
-        let unsubUsers = null;
-        let unsubWalks = null;
-        let pendingAction = null; 
-        
-        let globalActiveWalk = null; // Controla el estado del cronómetro en la nube
-        let unsubActiveWalk = null;
+        // Exportamos al scope global para que los onclick de HTML funcionen
+        window.state = state;
+        window.loginState = loginState;
 
-        // --- SISTEMA WAKE LOCK (Evitar que la pantalla se apague) ---
-        let wakeLock = null;
-
-        async function requestWakeLock() {
-            if (!('wakeLock' in navigator)) return;
-            
-            // Si el código se está ejecutando dentro de un iframe (como una vista previa de código), 
-            // el navegador bloqueará el WakeLock por política de seguridad. 
-            // Esta comprobación evita que salte el error en pantalla.
-            if (window.self !== window.top) {
-                console.log("Wake Lock desactivado al estar en vista previa (iframe).");
-                return;
-            }
-
+        async function initFirebase() {
             try {
-                wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) {
-                // Silenciamos el error por si acaso otros navegadores muy restrictivos lo bloquean
-                console.log("El navegador no permitió mantener la pantalla encendida.");
-            }
-        }
-
-        function releaseWakeLock() {
-            if (wakeLock !== null) {
-                wakeLock.release().then(() => { wakeLock = null; }).catch(err => console.warn(err));
-            }
-        }
-
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                if (window.self === window.top) {
-                    requestWakeLock();
-                }
-            }
-        });
-
-
-        // --- SISTEMA GPS Y RUTAS ---
-        let geoWatchId = null;
-        let activeRoute = []; 
-
-        function startGPSTracking() {
-            const savedRoute = localStorage.getItem('mw_active_route');
-            if (savedRoute) activeRoute = JSON.parse(savedRoute);
-            else activeRoute = [];
-
-            if ("geolocation" in navigator) {
-                if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
-                geoWatchId = navigator.geolocation.watchPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        const lastPoint = activeRoute[activeRoute.length - 1];
-                        if (!lastPoint || (Math.abs(lastPoint[0] - lat) > 0.0001 || Math.abs(lastPoint[1] - lng) > 0.0001)) {
-                            activeRoute.push([lat, lng]);
-                            localStorage.setItem('mw_active_route', JSON.stringify(activeRoute));
-                        }
-                    },
-                    (error) => { console.warn("Error GPS: ", error.message); },
-                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-                );
-            }
-        }
-
-        function stopGPSTracking() {
-            if (geoWatchId !== null) {
-                navigator.geolocation.clearWatch(geoWatchId);
-                geoWatchId = null;
-            }
-            const finalRoute = [...activeRoute];
-            activeRoute = [];
-            localStorage.removeItem('mw_active_route');
-            return finalRoute; 
-        }
-
-        // --- MAPA LEAFLET LÓGICA ---
-        let leafletMap = null;
-        let leafletPolyline = null;
-        const routeModal = document.getElementById('route-modal');
-
-        function showRouteMap(walkId) {
-            const walk = allWalks.find(w => w.id === walkId);
-            if (!walk || !walk.route) return;
-
-            let routeData = [];
-            try {
-                // Desempaquetar el texto a una lista de coordenadas
-                routeData = typeof walk.route === 'string' ? JSON.parse(walk.route) : walk.route;
-            } catch(e) { return; }
-
-            if (routeData.length === 0) return;
-
-            routeModal.classList.remove('hidden');
-
-            setTimeout(() => {
-                if (!leafletMap) {
-                    leafletMap = L.map('map-view').setView(routeData[0], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; OpenStreetMap contributors'
-                    }).addTo(leafletMap);
-                }
-
-                if (leafletPolyline) leafletMap.removeLayer(leafletPolyline);
-
-                leafletPolyline = L.polyline(routeData, { color: '#38bdf8', weight: 5, opacity: 0.8 }).addTo(leafletMap);
-                
-                L.circleMarker(routeData[0], { radius: 6, fillColor: '#22c55e', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(leafletMap);
-                L.circleMarker(routeData[routeData.length - 1], { radius: 6, fillColor: '#ef4444', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(leafletMap);
-
-                leafletMap.fitBounds(leafletPolyline.getBounds(), { padding: [20, 20] });
-                leafletMap.invalidateSize();
-            }, 100);
-        }
-
-        document.getElementById('close-map-btn').onclick = () => { routeModal.classList.add('hidden'); };
-
-        // --- CRONÓMETRO CIRCULAR LÓGICA ---
-        let timerInterval = null;
-        const btnCircleTimer = document.getElementById('btn-circle-timer');
-        const circleIcon = document.getElementById('circle-icon');
-        const circleTime = document.getElementById('circle-time');
-        const circleText = document.getElementById('circle-text');
-        
-        const gpsStatus = document.getElementById('gps-status');
-        const routeToggleContainer = document.getElementById('route-toggle-container');
-        const recordRouteToggle = document.getElementById('record-route-toggle');
-        const gpsWarningInline = document.getElementById('gps-warning-inline');
-        
-        const viewTimer = document.getElementById('view-timer');
-        const viewManual = document.getElementById('walkForm');
-        const btnToggleMode = document.getElementById('btn-toggle-mode');
-        const adminManualToggle = document.getElementById('admin-manual-toggle');
-        let isManualMode = false;
-
-        function formatTimeJS(date) {
-            return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
-        }
-
-        // Utilidad para convertir minutos en formato "1h 30min"
-        function formatDurationString(totalMins) {
-            if (totalMins < 60) return `<span class="text-xl font-black">${totalMins}</span><span class="text-[9px] ml-0.5 opacity-50 uppercase font-black font-sans">min</span>`;
-            const h = Math.floor(totalMins / 60);
-            const m = totalMins % 60;
-            if (m === 0) return `<span class="text-xl font-black">${h}</span><span class="text-[9px] ml-0.5 opacity-50 uppercase font-black font-sans">h</span>`;
-            return `<span class="text-xl font-black">${h}</span><span class="text-[9px] ml-0.5 opacity-50 uppercase font-black font-sans mr-1">h</span><span class="text-xl font-black">${m}</span><span class="text-[9px] ml-0.5 opacity-50 uppercase font-black font-sans">min</span>`;
-        }
-
-        recordRouteToggle.addEventListener('change', (e) => {
-            if (e.target.checked) gpsWarningInline.classList.remove('hidden');
-            else gpsWarningInline.classList.add('hidden');
-        });
-
-        function getSelectedWalkers() {
-            return Array.from(document.querySelectorAll('.walker-chip.bg-sky-500')).map(b => b.dataset.name).join(' + ');
-        }
-
-        function updateTimerUI() {
-            if (!globalActiveWalk) {
-                // ESTADO INACTIVO
-                circleIcon.classList.remove('hidden');
-                circleTime.classList.add('hidden');
-                circleText.innerText = "Iniciar";
-                
-                gpsStatus.classList.add('hidden');
-                gpsStatus.classList.remove('opacity-100');
-                
-                routeToggleContainer.classList.remove('hidden');
-                if (recordRouteToggle.checked) gpsWarningInline.classList.remove('hidden');
-                else gpsWarningInline.classList.add('hidden');
-                
-                btnCircleTimer.classList.remove('from-red-400', 'to-red-300', 'shadow-[0_10px_40px_-10px_rgba(248,113,113,0.6)]', 'animate-pulse');
-                btnCircleTimer.classList.add('from-sky-400', 'to-sky-300', 'shadow-[0_10px_40px_-10px_rgba(56,189,248,0.6)]');
-                
-                if (timerInterval) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                }
-                return;
-            }
-
-            // ESTADO ACTIVO (Cronómetro global)
-            const diff = Date.now() - globalActiveWalk.startMs;
-            const totalSeconds = Math.floor(diff / 1000);
-            const mins = Math.floor(totalSeconds / 60);
-            const secs = totalSeconds % 60;
-            
-            circleTime.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-            
-            circleIcon.classList.add('hidden');
-            circleTime.classList.remove('hidden');
-            circleText.innerText = "Finalizar";
-            
-            routeToggleContainer.classList.add('hidden');
-            gpsWarningInline.classList.add('hidden');
-
-            gpsStatus.classList.remove('hidden');
-            gpsStatus.classList.add('opacity-100');
-
-            btnCircleTimer.classList.remove('from-sky-400', 'to-sky-300', 'shadow-[0_10px_40px_-10px_rgba(56,189,248,0.6)]');
-            btnCircleTimer.classList.add('from-red-400', 'to-red-300', 'shadow-[0_10px_40px_-10px_rgba(248,113,113,0.6)]', 'animate-pulse');
-            
-            if (!timerInterval) timerInterval = setInterval(updateTimerUI, 1000);
-        }
-
-        btnCircleTimer.onclick = async () => {
-            if (!globalActiveWalk) {
-                // INICIAR PASEO GLOBAL
-                const walkers = getSelectedWalkers();
-                if (!walkers) return showModal("Aviso", "¡Por favor, selecciona quién va a pasear!", null);
-
-                const wantToRecordGPS = recordRouteToggle.checked;
-
-                const startWalkProcess = async () => {
-                    if (wantToRecordGPS) {
-                        requestWakeLock();
-                        startGPSTracking();
-                        localStorage.setItem('mw_am_i_recording', 'true'); 
-                    }
-
-                    // Enviar estado a la nube para que otros no puedan iniciar
-                    await setDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'active_walk', 'current'), {
-                        startMs: Date.now(),
-                        walkers: walkers,
-                        ownerId: currentUser.id
-                    });
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'maxwalker-default-id';
+                const firebaseConfig = {
+                    apiKey: "AIzaSyAyLqdIbmEZeLk6hFIKXVWHhgA37vgX9sw",
+                    authDomain: "dogwalker-pl.firebaseapp.com",
+                    projectId: "dogwalker-pl",
+                    storageBucket: "dogwalker-pl.firebasestorage.app",
+                    messagingSenderId: "531303785074",
+                    appId: "1:531303785074:web:ece0891cfebc06ac8218eb",
+                    measurementId: "G-MJPHBFNK54"
                 };
 
-                if (wantToRecordGPS) {
-                    showModal("¡Atención!", "Para que la ruta se guarde bien, NO APAGUES la pantalla ni salgas de la aplicación. La pantalla se mantendrá encendida sola.", startWalkProcess);
-                } else {
-                    startWalkProcess();
-                }
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                // Usaremos un único documento para guardar todo el estado debido a la estructura de la app
+                stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'maxwalker_state', 'main');
 
-            } else {
-                // FINALIZAR Y GUARDAR
-                const finishWalk = async () => {
-                    const endMs = Date.now();
-                    const startDate = new Date(globalActiveWalk.startMs);
-                    const endDate = new Date(endMs);
-                    
-                    let durationMins = Math.round((endMs - globalActiveWalk.startMs) / 60000);
-                    if (durationMins < 1) durationMins = 1;
-
-                    const amIRecording = localStorage.getItem('mw_am_i_recording') === 'true';
-                    let savedRoute = [];
-                    
-                    if (amIRecording) {
-                        releaseWakeLock();
-                        savedRoute = stopGPSTracking();
-                        localStorage.removeItem('mw_am_i_recording');
-                    }
-
-                    const walkData = {
-                        walker: globalActiveWalk.walkers,
-                        start: formatTimeJS(startDate),
-                        end: formatTimeJS(endDate),
-                        duration: durationMins,
-                        date: startDate.toLocaleDateString('es-ES'),
-                        timestamp: endMs,
-                        recordedBy: currentUser.name
-                    };
-
-                    if (savedRoute.length > 0) {
-                        // Transformar las coordenadas en texto para que Firebase lo acepte
-                        walkData.route = JSON.stringify(savedRoute);
-                    }
-
-                    try {
-                        const id = crypto.randomUUID();
-                        await setDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'walks', id), walkData);
-                        await deleteDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'active_walk', 'current'));
-                        showTab('history');
-                    } catch (err) {
-                        showModal("Error", "No se pudo guardar: " + err.message, null);
-                    }
-                };
-
-                // Comprobación de permisos para finalizar el paseo (Cualquiera de los participantes o admins)
-                const walkParticipants = globalActiveWalk.walkers.split(' + ');
-                const isParticipant = walkParticipants.includes(currentUser.name);
-                const isOwner = (globalActiveWalk.ownerId === currentUser.id);
-
-                if (!isOwner && !isParticipant) {
-                    if (currentUser.isAdmin) {
-                        showModal("Atención", "No estás registrado en este paseo. Si lo finalizas tú, la ruta GPS (si se estaba grabando en el otro móvil) podría perderse. ¿Finalizar de todas formas?", finishWalk);
+                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                try {
+                    if (initialToken) {
+                        await signInWithCustomToken(auth, initialToken);
                     } else {
-                        showModal("Acceso Denegado", "Solo las personas que están dando este paseo o un administrador pueden finalizarlo.", null);
+                        await signInAnonymously(auth);
                     }
-                } else {
-                    finishWalk();
-                }
-            }
-        };
-
-        btnToggleMode.onclick = () => {
-            isManualMode = !isManualMode;
-            if (isManualMode) {
-                viewTimer.classList.add('hidden');
-                viewManual.classList.remove('hidden');
-                btnToggleMode.innerText = "Usar cronómetro";
-                document.getElementById('formTitle').innerHTML = `<span>📝</span> Añadir Manual`;
-                document.getElementById('submitWalkBtn').innerHTML = `<span>💾</span> Guardar Manual`;
-                document.getElementById('editWalkId').value = ""; 
-                document.getElementById('cancelEditBtn').classList.add('hidden');
-                
-                // Fecha de hoy por defecto para el input type="date"
-                const now = new Date();
-                const yyyy = now.getFullYear();
-                const mm = String(now.getMonth() + 1).padStart(2, '0');
-                const dd = String(now.getDate()).padStart(2, '0');
-                document.getElementById('walkDate').value = `${yyyy}-${mm}-${dd}`;
-
-                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-                document.getElementById('startTime').value = timeStr;
-                document.getElementById('endTime').value = timeStr;
-                
-                updateWalkerOptions(); 
-            } else {
-                viewTimer.classList.remove('hidden');
-                viewManual.classList.add('hidden');
-                btnToggleMode.innerText = "Añadir manualmente";
-                document.getElementById('formTitle').innerHTML = `<span>🐾</span> Paseo Activo`;
-                updateWalkerOptions(); 
-            }
-        };
-
-        // --- AUTH Y PERSISTENCIA DE SESIÓN ---
-
-        const initAuth = async () => {
-            if (!auth) return;
-            try {
-                await signInAnonymously(auth);
-            } catch(e) {
-                document.getElementById('loader-spinner').classList.add('hidden');
-                document.getElementById('loader-text').innerText = "Error local";
-                document.getElementById('connection-error').classList.remove('hidden');
-            }
-        };
-
-        if (auth) {
-            onAuthStateChanged(auth, (user) => { 
-                if (user) syncUsers();
-            });
-        }
-
-        function syncUsers() {
-            if (unsubUsers) unsubUsers();
-            const usersRef = collection(db, 'artifacts', dbAppId, 'public', 'data', 'users');
-            unsubUsers = onSnapshot(usersRef, (snap) => {
-                allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                
-                const savedUserId = localStorage.getItem('mw_logged_in_user');
-                let autoLogged = false;
-
-                if (!currentUser && savedUserId) {
-                    const found = allUsers.find(u => u.id === savedUserId);
-                    if (found && found.pass !== "") {
-                        currentUser = found;
-                        autoLogged = true;
-                    } else {
-                        localStorage.removeItem('mw_logged_in_user');
-                    }
+                } catch (authError) {
+                    console.warn("Authentication failed with provided token, falling back to anonymous auth:", authError);
+                    await signInAnonymously(auth);
                 }
 
-                document.getElementById('loading-overlay').classList.add('hidden');
-                
-                if (allUsers.length === 0) {
-                    document.getElementById('setup-screen').classList.remove('hidden');
-                    document.getElementById('login-screen').classList.add('hidden');
-                } else if (!currentUser) {
-                    document.getElementById('login-screen').classList.remove('hidden');
-                    document.getElementById('setup-screen').classList.add('hidden');
-                }
-                
-                if (currentUser) {
-                    if(autoLogged) {
-                        document.getElementById('login-screen').classList.add('hidden');
-                        document.getElementById('app-content').classList.remove('hidden');
-                        if (currentUser.isAdmin) {
-                            document.getElementById('tab-admin').classList.remove('hidden');
-                            adminManualToggle.classList.remove('hidden');
-                        }
-                        syncData();
-                        showTab('register');
-                    }
-                    renderAdmin();
-                }
-            });
-        }
-
-        function syncData() {
-            if (!currentUser) return;
-            
-            // Escuchar el Historial
-            if (unsubWalks) unsubWalks();
-            const walksRef = collection(db, 'artifacts', dbAppId, 'public', 'data', 'walks');
-            unsubWalks = onSnapshot(walksRef, (snap) => {
-                allWalks = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
-                renderHistory();
-                renderStats();
-            });
-
-            // Escuchar el Paseo Activo (Sincronización Global)
-            if (unsubActiveWalk) unsubActiveWalk();
-            const activeRef = collection(db, 'artifacts', dbAppId, 'public', 'data', 'active_walk');
-            unsubActiveWalk = onSnapshot(activeRef, (snap) => {
-                if (!snap.empty) {
-                    globalActiveWalk = { id: snap.docs[0].id, ...snap.docs[0].data() };
-                    
-                    if (globalActiveWalk.ownerId === currentUser.id && localStorage.getItem('mw_am_i_recording') === 'true') {
-                        if (geoWatchId === null) {
-                            requestWakeLock();
-                            startGPSTracking();
+                // Listener en tiempo real de Firestore
+                onSnapshot(stateDocRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        state.users = data.users || [];
+                        state.walks = data.walks || {};
+                        state.defaultSchedule = data.defaultSchedule || { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 0: [] };
+                        state.notifications = data.notifications || [];
+                        state.swapRequests = data.swapRequests || [];
+                        
+                        // Si hay un usuario logueado, actualizar su referencia por si su rol/pin cambió
+                        if (state.currentUser) {
+                            state.currentUser = state.users.find(u => u.username === state.currentUser.username) || state.currentUser;
                         }
                     }
-                } else {
-                    globalActiveWalk = null;
-                    
-                    if (localStorage.getItem('mw_am_i_recording') === 'true') {
-                        releaseWakeLock();
-                        stopGPSTracking();
-                        localStorage.removeItem('mw_am_i_recording');
-                    }
-                }
-                updateTimerUI();
-                updateWalkerOptions(); 
-            });
+                    isDbReady = true;
+                    render();
+                }, (error) => {
+                    console.error("Firestore sync error:", error);
+                    isDbReady = true;
+                    render(); // Renderizar aunque haya error
+                });
+
+            } catch (e) {
+                console.error("Firebase init failed:", e);
+                isDbReady = true;
+                render();
+            }
         }
 
-        // --- HELPERS ---
-        function getPeriod(timeStr) {
-            if(!timeStr) return "Desconocido";
-            const [h, m] = timeStr.split(':').map(Number);
-            const total = h * 60 + m;
-            if (total >= 300 && total <= 540) return "Mañana";
-            if (total > 540 && total <= 960) return "Mediodía";
-            if (total > 960 && total <= 1260) return "Tarde";
-            return "Noche";
-        }
-
-        // --- MODAL SYSTEM ---
-        function showModal(title, msg, onConfirm) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-msg').innerText = msg;
-            const confirmBtn = document.getElementById('btn-modal-confirm');
-            if (!onConfirm) {
-                confirmBtn.classList.add('hidden');
-                document.getElementById('btn-modal-cancel').innerText = "Cerrar";
-            } else {
-                confirmBtn.classList.remove('hidden');
-                document.getElementById('btn-modal-cancel').innerText = "Cancelar";
-            }
-            pendingAction = onConfirm;
-            document.getElementById('custom-modal').classList.remove('hidden');
-        }
-
-        document.getElementById('btn-modal-cancel').onclick = () => {
-            document.getElementById('custom-modal').classList.add('hidden');
-            pendingAction = null;
-        };
-
-        document.getElementById('btn-modal-confirm').onclick = async () => {
-            document.getElementById('custom-modal').classList.add('hidden');
-            if (pendingAction) await pendingAction();
-            pendingAction = null;
-        };
-
-        // --- EVENT DELEGATION ---
-        document.addEventListener('click', async (e) => {
-            const target = e.target;
-            const btn = target.closest('button');
-            if (!btn) return;
-
-            if (btn.dataset.tab) {
-                showTab(btn.dataset.tab);
-                return;
-            }
-
-            const action = btn.dataset.action;
-            const id = btn.dataset.id;
-
-            if (action) {
-                if (action === 'show-map' && id) {
-                    showRouteMap(id);
-                }
-
-                if (action === 'reset-pass' && id) {
-                    const user = allUsers.find(u => u.id === id);
-                    showModal('Restablecer Clave', `¿Borrar la contraseña de ${user.name}?`, async () => {
-                        await updateDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'users', id), { pass: "" });
-                    });
-                }
-                
-                if (action === 'delete-user' && id) {
-                    if (id === currentUser?.id) return showModal('Error', 'No puedes borrar tu propia cuenta.', null);
-                    showModal('Eliminar Usuario', 'Esta acción es irreversible.', async () => {
-                        await deleteDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'users', id));
-                    });
-                }
-
-                if (action === 'delete-walk' && id) {
-                    showModal('Borrar Paseo', '¿Eliminar este registro?', async () => {
-                        await deleteDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'walks', id));
-                    });
-                }
-
-                if (action === 'edit-walk' && id) {
-                    const w = allWalks.find(walk => walk.id === id);
-                    if (w) {
-                        isManualMode = true;
-                        viewTimer.classList.add('hidden');
-                        viewManual.classList.remove('hidden');
-                        adminManualToggle.classList.add('hidden'); 
-
-                        document.getElementById('editWalkId').value = w.id;
-                        
-                        // Parsear la fecha del paseo para rellenar el input type="date"
-                        let editDate = "";
-                        if (w.date) {
-                            const parts = w.date.split('/');
-                            if (parts.length === 3) {
-                                const dd = parts[0].padStart(2, '0');
-                                const mm = parts[1].padStart(2, '0');
-                                const yyyy = parts[2];
-                                editDate = `${yyyy}-${mm}-${dd}`;
-                            }
-                        }
-                        document.getElementById('walkDate').value = editDate;
-                        document.getElementById('startTime').value = w.start;
-                        document.getElementById('endTime').value = w.end;
-                        
-                        document.getElementById('cancelEditBtn').classList.remove('hidden');
-                        document.getElementById('formTitle').innerHTML = `<span>✏️</span> Editando Paseo`;
-                        document.getElementById('submitWalkBtn').innerHTML = `<span>🔄</span> Actualizar Cambios`;
-                        
-                        updateWalkerOptions(w.walker.split(' + ')); 
-                        showTab('register');
-                    }
-                }
-            }
-        });
-
-        // --- FORMULARIOS ---
-
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const u = document.getElementById('loginUser').value.trim();
-            const p = document.getElementById('loginPass').value;
-            const found = allUsers.find(x => x.name.toLowerCase() === u.toLowerCase());
-            
-            if (!found) return document.getElementById('loginError').classList.remove('hidden');
-
-            if (!found.pass || found.pass === "") {
-                pendingUser = found;
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('password-setup-modal').classList.remove('hidden');
-                return;
-            }
-
-            if (found.pass === p) loginSuccess(found);
-            else document.getElementById('loginError').classList.remove('hidden');
-        });
-
-        function loginSuccess(user) {
-            currentUser = user;
-            localStorage.setItem('mw_logged_in_user', user.id);
-
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-content').classList.remove('hidden');
-            if (user.isAdmin) {
-                document.getElementById('tab-admin').classList.remove('hidden');
-                adminManualToggle.classList.remove('hidden');
-            } else {
-                document.getElementById('tab-admin').classList.add('hidden');
-                adminManualToggle.classList.add('hidden');
-            }
-            syncData();
-            showTab('register');
-        }
-
-        document.getElementById('savePassBtn').addEventListener('click', async () => {
-            const pass = document.getElementById('newAccountPass').value;
-            if (pass.length < 4) return showModal('Error', 'Mínimo 4 caracteres', null);
-            try {
-                await updateDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'users', pendingUser.id), { pass });
-                const updated = {...pendingUser, pass};
-                document.getElementById('password-setup-modal').classList.add('hidden');
-                loginSuccess(updated);
-            } catch (e) { console.error(e); }
-        });
-
-        // EDICIÓN MANUAL Y NUEVOS REGISTROS MANUALES (Admins)
-        document.getElementById('walkForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const walkers = getSelectedWalkers();
-            if (!walkers) return showModal("Error", "Selecciona al menos un paseador", null);
-
-            const editId = document.getElementById('editWalkId').value;
-            const id = editId || crypto.randomUUID();
-            
-            const inputDate = document.getElementById('walkDate').value;
-            const start = document.getElementById('startTime').value;
-            const end = document.getElementById('endTime').value;
-            
-            if (!start || !end || !inputDate) return showModal("Error", "Faltan datos de fecha u hora", null);
-
-            // Calcular duración
-            const [h1, m1] = start.split(':').map(Number);
-            const [h2, m2] = end.split(':').map(Number);
-            let dur = (h2 * 60 + m2) - (h1 * 60 + m1);
-            if (dur < 0) dur += 1440;
-
-            // Formatear fecha para guardarla como DD/MM/YYYY
-            const [yyyy, mm, dd] = inputDate.split('-');
-            const displayDate = `${dd}/${mm}/${yyyy}`;
-            
-            // Generar timestamp exacto basado en la fecha seleccionada para que el historial se ordene correctamente
-            const walkDateObj = new Date(yyyy, mm - 1, dd, h1, m1);
-            const computedTimestamp = walkDateObj.getTime();
-
-            const existingWalk = editId ? allWalks.find(w => w.id === editId) : null;
-
-            const walkData = {
-                walker: walkers,
-                start, end, duration: dur,
-                date: displayDate,
-                timestamp: computedTimestamp,
-                recordedBy: currentUser.name
+        async function saveData() {
+            if (!auth || !auth.currentUser || !stateDocRef) return;
+            const dataToSave = {
+                users: state.users,
+                walks: state.walks,
+                defaultSchedule: state.defaultSchedule,
+                notifications: state.notifications,
+                swapRequests: state.swapRequests
             };
-            
-            if (existingWalk && existingWalk.route) walkData.route = existingWalk.route;
-
             try {
-                await setDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'walks', id), walkData);
-                cancelEdit();
-                showTab('history');
-            } catch (err) {
-                showModal("Error", "No se pudo guardar: " + err.message, null);
+                await setDoc(stateDocRef, dataToSave);
+            } catch (e) {
+                console.error("Error saving data:", e);
             }
-        });
-
-        function cancelEdit() {
-            document.getElementById('walkForm').reset();
-            document.getElementById('editWalkId').value = "";
-            document.getElementById('cancelEditBtn').classList.add('hidden');
-            
-            viewTimer.classList.remove('hidden');
-            viewManual.classList.add('hidden');
-            
-            isManualMode = false;
-            btnToggleMode.innerText = "Añadir manualmente";
-            if (currentUser && currentUser.isAdmin) adminManualToggle.classList.remove('hidden');
-            document.getElementById('formTitle').innerHTML = `<span>🐾</span> Paseo Activo`;
-            
-            updateWalkerOptions();
         }
-        document.getElementById('cancelEditBtn').onclick = cancelEdit;
 
-        document.getElementById('userForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = crypto.randomUUID();
-            await setDoc(doc(db, 'artifacts', dbAppId, 'public', 'data', 'users', id), {
-                name: document.getElementById('userName').value.trim(),
-                pass: document.getElementById('userPass').value || "",
-                isAdmin: document.getElementById('userIsAdmin').checked
+        // Utility: Generate Unique IDs
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        function formatDateKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        function formatDisplayDate(date) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            let str = date.toLocaleDateString('es-ES', options);
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function addNotification(userId, type, message, reqId = null) {
+            state.notifications.unshift({
+                id: generateId(),
+                userId,
+                type,
+                message,
+                timestamp: new Date().toISOString(),
+                relatedReqId: reqId,
+                read: false
             });
-            document.getElementById('userForm').reset();
-        });
-
-        document.getElementById('logoutBtn').onclick = () => {
-            localStorage.removeItem('mw_logged_in_user');
-            location.reload();
-        };
-
-        // --- RENDERIZADO ---
-
-        function showTab(tab) {
-            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-            const target = document.getElementById(`section-${tab}`);
-            if (target) target.classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active', 'text-sky-600'));
-            const btn = document.querySelector(`button[data-tab="${tab}"]`);
-            if (btn) btn.classList.add('tab-active', 'text-sky-600');
-            if (tab === 'admin') renderAdmin();
+            saveData();
         }
 
-        // CONTROL DE BOTONES CHIP (Paseadores Múltiples)
-        function updateWalkerOptions(selectedNames = []) {
-            const container = document.getElementById('walkersList');
-            if (!container) return;
+        function notifyAdmins(message) {
+            state.users.filter(u => u.role === 'admin').forEach(admin => {
+                addNotification(admin.username, 'alert', message);
+            });
+        }
 
-            if (globalActiveWalk && !isManualMode) {
-                container.innerHTML = `<div class="bg-sky-500 text-white font-bold text-xs px-4 py-2 rounded-full shadow-sm w-full text-center tracking-wide">${globalActiveWalk.walkers}</div>`;
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (!isDbReady) {
+                app.innerHTML = `
+                    <div class="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+                        <i class="ph ph-spinner-gap text-5xl text-indigo-500 animate-spin mb-4"></i>
+                        <p class="text-slate-400 font-medium animate-pulse">Conectando a la nube...</p>
+                    </div>
+                `;
                 return;
             }
 
-            container.innerHTML = allUsers.map(u => `
-                <button type="button" data-name="${u.name}" class="walker-chip bg-white border border-sky-100 text-slate-500 font-bold text-[11px] px-4 py-2 rounded-full shadow-sm hover:bg-sky-50 transition-colors">
-                    ${u.name}
-                </button>
-            `).join('');
+            if (state.users.length === 0) {
+                app.innerHTML = renderFirstAdmin();
+                return;
+            }
 
-            const chips = container.querySelectorAll('.walker-chip');
-            chips.forEach(chip => {
-                const name = chip.dataset.name;
-                
-                const toggleChip = () => {
-                    chip.classList.toggle('bg-sky-500');
-                    chip.classList.toggle('text-white');
-                    chip.classList.toggle('border-sky-500');
-                    chip.classList.toggle('bg-white');
-                    chip.classList.toggle('text-slate-500');
-                };
-
-                chip.onclick = toggleChip;
-                
-                if (selectedNames.length > 0) {
-                    if (selectedNames.includes(name)) toggleChip();
-                } else if (!isManualMode && name === currentUser?.name) {
-                    toggleChip(); 
-                }
-            });
+            if (state.view === 'login') {
+                app.innerHTML = renderLogin();
+            } else if (state.view === 'app') {
+                app.innerHTML = `
+                    ${renderNavbar()}
+                    <main class="max-w-5xl mx-auto px-4 md:px-6 pb-20 pt-6">
+                        ${state.activeTab === 'calendar' ? renderCalendar() : state.activeTab === 'stats' ? renderStats() : renderAdmin()}
+                    </main>
+                `;
+            }
         }
+        window.render = render;
 
-        function renderHistory() {
-            const list = document.getElementById('historyList');
-            if (allWalks.length === 0) return list.innerHTML = `<div class="text-center py-20 text-sky-200 font-bold text-xs uppercase tracking-widest">Sin registros</div>`;
-            
-            list.innerHTML = allWalks.map(w => {
-                const period = getPeriod(w.start);
-                
-                let hasRoute = false;
-                if (w.route) {
-                    try {
-                        const parsedRoute = typeof w.route === 'string' ? JSON.parse(w.route) : w.route;
-                        hasRoute = parsedRoute && parsedRoute.length > 0;
-                    } catch(e) {}
-                }
-                
-                return `
-                <div class="card p-4 border-l-4 ${w.duration >= 30 ? 'border-sky-400' : 'border-sky-200'} bg-white mb-3 relative overflow-hidden">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                <p class="font-bold text-sky-900 text-[13px] leading-tight">${w.walker}</p>
-                            </div>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">${w.date} · ${w.start} - ${w.end}</p>
-                            <div class="flex gap-2 items-center mt-1.5">
-                                <span class="bg-sky-50 text-sky-600 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">${period}</span>
-                                <span class="text-[9px] text-slate-300 font-medium">Reg: ${w.recordedBy || '?'}</span>
-                            </div>
-                        </div>
-                        <div class="text-right pl-2 flex items-baseline justify-end text-sky-600 font-timer">
-                            ${formatDurationString(w.duration)}
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-2 mt-3 justify-end items-center border-t border-slate-50 pt-3">
-                        ${hasRoute ? `
-                            <button data-action="show-map" data-id="${w.id}" class="text-[10px] font-bold text-sky-600 bg-sky-100 hover:bg-sky-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
-                                🗺️ Ver Ruta
-                            </button>
-                        ` : ''}
+        function renderFirstAdmin() {
+            return `
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="glass-panel p-8 rounded-3xl w-full max-w-md text-center">
+                        <i class="ph ph-cloud-check text-6xl text-indigo-400 mb-4"></i>
+                        <h1 class="text-3xl font-bold text-white mb-2">MaxWalker Cloud</h1>
+                        <p class="text-slate-400 mb-8">Base de datos iniciada. Crea el primer administrador del sistema.</p>
                         
-                        ${currentUser.isAdmin ? `
-                            <button data-action="edit-walk" data-id="${w.id}" class="text-[10px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-2 py-1.5 rounded-lg uppercase transition-colors">Editar</button>
-                            <button data-action="delete-walk" data-id="${w.id}" class="text-[10px] font-bold text-red-400 bg-red-50 hover:bg-red-100 px-2 py-1.5 rounded-lg uppercase transition-colors">Borrar</button>
-                        ` : ''}
+                        <form onsubmit="handleFirstAdmin(event)" class="space-y-4">
+                            <input type="text" id="adminUser" placeholder="Usuario" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                            <input type="password" inputmode="numeric" pattern="[0-9]*" id="adminPin" placeholder="PIN numérico" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30">
+                                Crear Sistema
+                            </button>
+                        </form>
                     </div>
                 </div>
-            `}).join('');
+            `;
         }
 
-        function renderAdmin() {
-            const uList = document.getElementById('usersList');
-            if (!uList) return;
-            uList.innerHTML = allUsers.map(u => `
-                <div class="flex justify-between items-center p-3 bg-white border border-sky-50 rounded-xl mb-2 shadow-sm">
-                    <div>
-                        <p class="font-bold text-sky-900 text-xs flex items-center gap-1">
-                            ${u.name} 
-                            ${u.isAdmin ? '<span class="text-[8px] bg-sky-100 text-sky-600 px-1 rounded uppercase">Admin</span>' : ''}
-                        </p>
-                        <p class="text-[8px] font-bold ${(!u.pass) ? 'text-orange-400' : 'text-slate-300'} uppercase mt-0.5 tracking-wider">
-                            ${(!u.pass) ? '⚠️ Clave Pendiente' : '✅ Activo'}
-                        </p>
+        function handleFirstAdmin(e) {
+            e.preventDefault();
+            const user = document.getElementById('adminUser').value.trim();
+            const pin = document.getElementById('adminPin').value.trim();
+            
+            if (user && pin) {
+                state.users.push({ username: user, pin: pin, role: 'admin' });
+                saveData();
+                state.currentUser = state.users[0];
+                state.view = 'app';
+                state.activeTab = 'calendar';
+                render();
+            }
+        }
+
+        function renderLogin() {
+            if (loginState.step === 'user') {
+                return `
+                    <div class="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
+                        <div class="absolute w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] top-10 left-10"></div>
+                        <div class="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] bottom-10 right-10"></div>
+
+                        <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center relative z-10">
+                            <div class="w-20 h-20 mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl transform rotate-3 overflow-hidden">
+                                <img src="icon.png" alt="MaxWalker Icon" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <i class="ph ph-dog text-4xl text-white" style="display:none;"></i>
+                            </div>
+                            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">MaxWalker</h1>
+                            <div class="text-xs text-indigo-400 mb-6 font-semibold"><i class="ph ph-cloud"></i> Cloud Sync</div>
+                            
+                            <form onsubmit="handleLoginUser(event)" class="space-y-4">
+                                <input type="text" id="loginUser" placeholder="Usuario" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <div id="loginError" class="text-red-400 text-sm hidden">Usuario no encontrado</div>
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-indigo-500/30 mt-4">
+                                    Continuar
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button data-action="reset-pass" data-id="${u.id}" class="p-2 bg-sky-50 text-sky-500 rounded-lg text-xs hover:bg-sky-100 transition-colors">🔄</button>
-                        <button data-action="delete-user" data-id="${u.id}" class="p-2 bg-red-50 text-red-300 rounded-lg text-xs hover:bg-red-100 transition-colors">✕</button>
+                `;
+            } else {
+                return `
+                    <div class="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
+                        <div class="absolute w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] top-10 left-10"></div>
+                        <div class="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] bottom-10 right-10"></div>
+
+                        <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center relative z-10">
+                            <h2 class="text-2xl font-bold text-white mb-2">Hola, ${loginState.username}</h2>
+                            <p class="text-slate-400 text-sm mb-6">Ingresa tu PIN numérico</p>
+                            
+                            <div class="flex justify-center items-center gap-3 mb-8 h-6">
+                                ${loginState.pin.length === 0 ? `<span class="text-slate-500 text-sm animate-pulse">Usa el teclado o botones</span>` : 
+                                  Array.from({length: loginState.pin.length}).map(() => `<div class="w-4 h-4 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>`).join('')}
+                            </div>
+
+                            ${loginState.error ? `<div class="text-red-400 text-sm mb-4 animate-bounce">PIN incorrecto</div>` : ''}
+
+                            <div class="grid grid-cols-3 gap-4 max-w-[240px] mx-auto">
+                                ${[1,2,3,4,5,6,7,8,9].map(n => `
+                                    <button onclick="handlePinInput('${n}')" class="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-xl font-medium text-white hover:bg-white/10 active:bg-white/20 transition-all flex items-center justify-center mx-auto">${n}</button>
+                                `).join('')}
+                                <button onclick="handlePinBackspace()" class="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-xl font-medium text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/20 transition-all flex items-center justify-center mx-auto"><i class="ph ph-backspace"></i></button>
+                                <button onclick="handlePinInput('0')" class="w-16 h-16 rounded-full bg-white/5 border border-white/10 text-xl font-medium text-white hover:bg-white/10 active:bg-white/20 transition-all flex items-center justify-center mx-auto">0</button>
+                                <button onclick="handlePinSubmit()" class="w-16 h-16 rounded-full bg-indigo-600 border border-indigo-500/50 text-xl font-medium text-white hover:bg-indigo-500 active:bg-indigo-400 transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] flex items-center justify-center mx-auto"><i class="ph-bold ph-check"></i></button>
+                            </div>
+                            
+                            <button onclick="loginState.step = 'user'; loginState.pin = ''; loginState.error = false; render()" class="mt-8 text-sm text-slate-400 hover:text-white transition-colors">Cambiar usuario</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function handleLoginUser(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            
+            const found = state.users.find(u => u.username.toLowerCase() === user.toLowerCase());
+            if (found) {
+                loginState.step = 'pin';
+                loginState.username = found.username;
+                loginState.pin = '';
+                loginState.error = false;
+                render();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function handlePinInput(num) {
+            if (loginState.pin.length < 10) { 
+                loginState.pin += num;
+                loginState.error = false;
+                render();
+            }
+        }
+
+        function handlePinBackspace() {
+            if (loginState.pin.length > 0) {
+                loginState.pin = loginState.pin.slice(0, -1);
+                loginState.error = false;
+                render();
+            }
+        }
+
+        function handlePinSubmit() {
+            const found = state.users.find(u => u.username === loginState.username && u.pin === loginState.pin);
+            if (found) {
+                state.currentUser = found;
+                state.view = 'app';
+                state.activeTab = 'calendar';
+                
+                loginState.step = 'user';
+                loginState.username = '';
+                loginState.pin = '';
+                
+                render();
+            } else {
+                loginState.error = true;
+                loginState.pin = ''; 
+                render();
+            }
+        }
+
+        function logout() {
+            state.currentUser = null;
+            state.view = 'login';
+            render();
+        }
+
+        function renderNavbar() {
+            const myNotifs = state.notifications.filter(n => n.userId === state.currentUser.username);
+            const unreadCount = myNotifs.filter(n => !n.read).length;
+
+            return `
+                <nav class="sticky top-0 z-40 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10">
+                    <div class="max-w-5xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                                <img src="icon.png" alt="MaxWalker Icon" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <i class="ph ph-dog text-xl text-white" style="display:none;"></i>
+                            </div>
+                            <span class="font-bold text-xl tracking-tight hidden sm:block text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">MaxWalker</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-1 sm:gap-2">
+                            <button onclick="state.activeTab = 'calendar'; render()" class="px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all ${state.activeTab === 'calendar' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400 hover:text-white'}">
+                                <i class="ph ph-calendar-blank mr-1"></i> <span class="hidden sm:inline">Calendario</span>
+                            </button>
+                            <button onclick="state.activeTab = 'stats'; render()" class="px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all ${state.activeTab === 'stats' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400 hover:text-white'}">
+                                <i class="ph ph-chart-bar mr-1"></i> <span class="hidden sm:inline">Estadísticas</span>
+                            </button>
+                            ${state.currentUser?.role === 'admin' ? `
+                                <button onclick="state.activeTab = 'admin'; render()" class="px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all ${state.activeTab === 'admin' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400 hover:text-white'}">
+                                    <i class="ph ph-shield-star mr-1"></i> <span class="hidden sm:inline">Admin</span>
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button onclick="openNotifications()" class="relative p-2 text-slate-400 hover:text-white transition-colors">
+                                <i class="ph ph-bell text-xl"></i>
+                                ${unreadCount > 0 ? `<span class="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>` : ''}
+                            </button>
+                            <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 transition-colors">
+                                <i class="ph ph-sign-out text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                </nav>
+            `;
+        }
+
+        function renderCalendar() {
+            const dateKey = formatDateKey(state.currentDate);
+            const dayOfWeek = state.currentDate.getDay();
+            
+            let defaultForDay = state.defaultSchedule[dayOfWeek] || [];
+            let specificForDay = state.walks[dateKey] || [];
+            
+            // Instanciar valores por defecto y guardar
+            if (specificForDay.length === 0 && defaultForDay.length > 0) {
+                specificForDay = defaultForDay.map(d => ({
+                    id: generateId(),
+                    time: d.time,
+                    walker: d.walker,
+                    type: d.type,
+                    status: 'pending',
+                    duration: 0,
+                    isDefaultInstantiated: true
+                }));
+                state.walks[dateKey] = specificForDay;
+                saveData();
+            }
+
+            let todayWalks = [...(state.walks[dateKey] || [])];
+            todayWalks.sort((a, b) => a.time.localeCompare(b.time));
+
+            return `
+                <div class="space-y-6 animate-fade-in text-left">
+                    <div class="flex items-center justify-between bg-[#1e293b]/50 backdrop-blur-md border border-white/5 rounded-2xl p-4 shadow-lg">
+                        <button onclick="changeDay(-1)" class="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-slate-300">
+                            <i class="ph ph-caret-left text-xl"></i>
+                        </button>
+                        
+                        <div class="text-center flex-1">
+                            <h2 class="text-2xl font-bold text-white capitalize">${formatDisplayDate(state.currentDate)}</h2>
+                            ${dateKey === formatDateKey(new Date()) ? `<span class="text-xs font-semibold bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded-md uppercase tracking-wider mt-1 inline-block">Hoy</span>` : ''}
+                        </div>
+
+                        <button onclick="changeDay(1)" class="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-slate-300">
+                            <i class="ph ph-caret-right text-xl"></i>
+                        </button>
+                    </div>
+
+                    ${state.currentUser.role === 'admin' ? `
+                        <button onclick="openAddWalkModal()" class="w-full glass-button p-4 rounded-2xl text-slate-300 flex items-center justify-center gap-2 border-dashed border-white/20 hover:border-indigo-400/50 hover:text-indigo-300">
+                            <i class="ph ph-plus-circle text-xl"></i> Añadir Paseo Extra
+                        </button>
+                    ` : ''}
+
+                    <div class="space-y-3">
+                        ${todayWalks.length === 0 ? `
+                            <div class="text-center p-10 glass-panel rounded-3xl text-slate-500">
+                                <i class="ph ph-moon-stars text-5xl mb-3 opacity-50"></i>
+                                <p>No hay paseos programados para este día.</p>
+                            </div>
+                        ` : todayWalks.map(walk => {
+                            let isFlagged = false;
+                            if (walk.status === 'completed') {
+                                if (walk.type === 'Corto' && walk.duration < MIN_SHORT_WALK) isFlagged = true;
+                                if (walk.type === 'Largo' && walk.duration < MIN_LONG_WALK) isFlagged = true;
+                            }
+
+                            const statusColors = {
+                                pending: 'border-white/10 hover:border-indigo-500/50',
+                                active: 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)] bg-indigo-900/20',
+                                completed: isFlagged ? 'border-red-500/50 flagged-walk' : 'border-emerald-500/50 bg-emerald-900/10'
+                            };
+
+                            const iconColors = {
+                                pending: 'text-slate-400',
+                                active: 'text-indigo-400 animate-pulse',
+                                completed: isFlagged ? 'text-red-400' : 'text-emerald-400'
+                            };
+
+                            return `
+                            <div onclick="openTimerModal('${dateKey}', '${walk.id}')" class="glass-panel p-4 rounded-2xl cursor-pointer transition-all duration-300 ${statusColors[walk.status]} group flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 rounded-full bg-black/40 flex items-center justify-center border border-white/5">
+                                        <i class="ph ${walk.type === 'Largo' ? 'ph-sneaker' : 'ph-paw-print'} text-2xl ${iconColors[walk.status]}"></i>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="text-xl font-bold text-white">${walk.time}</h4>
+                                            <span class="text-xs px-2 py-0.5 rounded-full ${walk.type === 'Largo' ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'} font-medium border border-white/10">${walk.type}</span>
+                                        </div>
+                                        <div class="text-slate-400 text-sm flex items-center gap-1 mt-0.5">
+                                            <i class="ph ph-user"></i> ${walk.walker}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4 text-right">
+                                    ${walk.status === 'completed' ? `
+                                        <div>
+                                            <div class="text-lg font-mono font-bold ${isFlagged ? 'text-red-400' : 'text-emerald-400'}">${formatTime(walk.duration)}</div>
+                                            <div class="text-xs text-slate-500 flex items-center gap-1 justify-end"><i class="ph ph-check-circle"></i> por ${walk.completedBy || walk.walker}</div>
+                                        </div>
+                                    ` : walk.status === 'active' ? `
+                                        <div class="text-indigo-400 flex items-center gap-2 font-semibold">
+                                            <i class="ph ph-spinner-gap animate-spin"></i> En curso
+                                        </div>
+                                    ` : `
+                                        <i class="ph ph-caret-right text-slate-500 group-hover:text-indigo-400 transition-colors"></i>
+                                    `}
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
-            `).join('');
+            `;
+        }
+
+        function changeDay(offset) {
+            state.currentDate.setDate(state.currentDate.getDate() + offset);
+            render();
+        }
+
+        function openAddWalkModal() {
+            const modalRoot = document.getElementById('modal-root');
+            const usersOpts = state.users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+            
+            modalRoot.innerHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div class="absolute inset-0 modal-overlay" onclick="closeModal()"></div>
+                    <div class="glass-panel w-full max-w-sm rounded-3xl p-6 relative z-10 animate-fade-in text-left border border-indigo-500/30">
+                        <h3 class="text-xl font-bold text-white mb-4">Añadir Paseo</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Hora</label>
+                                <input type="time" id="newTime" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Paseador</label>
+                                <select id="newWalker" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:outline-none">
+                                    ${usersOpts}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Tipo</label>
+                                <select id="newType" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:outline-none">
+                                    <option value="Corto">Corto (Mín 10m)</option>
+                                    <option value="Largo">Largo (Mín 1h)</option>
+                                </select>
+                            </div>
+                            <div class="pt-2 flex gap-3">
+                                <button onclick="closeModal()" class="flex-1 py-3 px-4 rounded-xl text-slate-300 bg-white/5 hover:bg-white/10 font-semibold transition-all">Cancelar</button>
+                                <button onclick="saveNewWalk()" class="flex-1 py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 font-bold shadow-lg shadow-indigo-500/30 transition-all">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveNewWalk() {
+            const time = document.getElementById('newTime').value;
+            const walker = document.getElementById('newWalker').value;
+            const type = document.getElementById('newType').value;
+            
+            if (!time) return;
+
+            const dateKey = formatDateKey(state.currentDate);
+            if (!state.walks[dateKey]) state.walks[dateKey] = [];
+            
+            state.walks[dateKey].push({
+                id: generateId(),
+                time,
+                walker,
+                type,
+                status: 'pending',
+                duration: 0
+            });
+            
+            saveData();
+            closeModal();
+            render();
+        }
+
+        let timerDisplayInterval;
+        
+        function openTimerModal(dateKey, walkId) {
+            const walk = (state.walks[dateKey] || []).find(w => w.id === walkId);
+            if (!walk) return;
+
+            const modalRoot = document.getElementById('modal-root');
+            let isFlagged = false;
+            let minRequiredText = walk.type === 'Corto' ? 'Mínimo 10 min' : 'Mínimo 1 hora';
+            let minReqSeconds = walk.type === 'Corto' ? MIN_SHORT_WALK : MIN_LONG_WALK;
+            const isToday = dateKey === formatDateKey(new Date());
+
+            if (walk.status === 'completed') {
+                if (walk.duration < minReqSeconds) isFlagged = true;
+            }
+
+            modalRoot.innerHTML = `
+                <div class="fixed inset-0 z-50 flex flex-col items-center justify-center p-4">
+                    <div class="absolute inset-0 modal-overlay" onclick="closeModal()"></div>
+                    <div class="relative z-10 text-center w-full max-w-sm">
+                        
+                        <div class="bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-4 mb-8 shadow-2xl inline-block text-left mx-auto w-full">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-white font-bold text-xl">${walk.time}</span>
+                                <span class="text-xs px-2 py-1 rounded-lg bg-white/10 text-slate-300 uppercase tracking-wider">${walk.type}</span>
+                            </div>
+                            <div class="text-slate-400 text-sm"><i class="ph ph-user"></i> Asignado a: <span class="text-white">${walk.walker}</span></div>
+                            <div class="text-xs text-indigo-400 mt-1"><i class="ph ph-info"></i> ${minRequiredText}</div>
+                        </div>
+
+                        <button id="giantTimerBtn" onclick="${isToday || walk.status !== 'pending' ? `toggleTimer('${dateKey}', '${walkId}')` : ''}" class="w-64 h-64 rounded-full border-4 border-slate-700 bg-[#0f172a] timer-circle flex flex-col items-center justify-center mx-auto relative overflow-hidden group outline-none ${walk.status === 'active' ? 'timer-active' : ''} ${walk.status === 'completed' && !isFlagged ? 'timer-finished' : ''} ${isFlagged ? 'timer-flagged' : ''} ${!isToday && walk.status === 'pending' ? 'cursor-not-allowed opacity-75' : ''}">
+                            
+                            ${walk.status === 'pending' ? `
+                                ${isToday ? `
+                                    <i class="ph ph-play-circle text-6xl text-indigo-400 group-hover:scale-110 transition-transform mb-2"></i>
+                                    <span class="text-slate-300 font-bold uppercase tracking-widest">Iniciar</span>
+                                ` : `
+                                    <i class="ph ph-lock-key text-5xl text-slate-500 mb-2"></i>
+                                    <span class="text-slate-400 font-bold uppercase tracking-widest text-xs mt-3 px-6">Solo disponible hoy</span>
+                                `}
+                            ` : walk.status === 'active' ? `
+                                <div class="absolute inset-0 bg-indigo-500/10 animate-pulse"></div>
+                                <div id="timerDisplay" class="text-5xl font-mono font-bold text-white relative z-10 tracking-tighter">
+                                    00:00:00
+                                </div>
+                                <span class="text-indigo-300 text-xs uppercase tracking-widest mt-2 relative z-10 flex items-center gap-1"><i class="ph ph-stop-circle text-lg"></i> Detener</span>
+                            ` : `
+                                <div class="text-5xl font-mono font-bold ${isFlagged ? 'text-red-400' : 'text-emerald-400'} mb-1">${formatTime(walk.duration)}</div>
+                                <div class="text-slate-400 text-sm"><i class="ph ph-check-circle"></i> Completado</div>
+                                <div class="text-xs mt-1 text-slate-500">por ${walk.completedBy || walk.walker}</div>
+                                ${isFlagged ? `<div class="text-xs font-bold text-red-500 mt-2 bg-red-900/30 px-2 py-1 rounded-full"><i class="ph ph-warning"></i> Tiempo Insuficiente</div>` : ''}
+                            `}
+                        </button>
+
+                        <div class="mt-8 space-y-3">
+                            ${walk.status !== 'completed' && (walk.walker === state.currentUser.username || state.currentUser.role === 'admin') ? `
+                                <button onclick="openSwapModal('${dateKey}', '${walkId}')" class="glass-button w-full p-4 rounded-2xl text-slate-300 font-semibold flex items-center justify-center gap-2">
+                                    <i class="ph ph-arrows-left-right text-xl text-indigo-400"></i> ${state.currentUser.role === 'admin' ? 'Forzar Cambio (Admin)' : 'Solicitar Cambio de Turno'}
+                                </button>
+                            ` : ''}
+
+                            ${walk.status === 'completed' && state.currentUser.role === 'admin' ? `
+                                <div class="bg-black/40 border border-purple-500/30 rounded-2xl p-4 text-left">
+                                    <h4 class="text-xs font-bold text-purple-400 uppercase mb-3 flex items-center gap-1"><i class="ph ph-shield-star"></i> Opciones de Admin</h4>
+                                    <div class="flex gap-2 mb-3">
+                                        <input type="text" id="adminTimeOverride" placeholder="HH:MM:SS" value="${formatTime(walk.duration)}" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono text-center focus:outline-none focus:border-purple-500">
+                                        <button onclick="adminSaveTime('${dateKey}', '${walkId}')" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">Guardar</button>
+                                    </div>
+                                    <button onclick="adminResetTimer('${dateKey}', '${walkId}')" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all">
+                                        <i class="ph ph-arrow-counter-clockwise"></i> Restablecer Cronómetro
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (walk.status === 'active') {
+                updateTimerDisplay(); 
+                clearInterval(timerDisplayInterval);
+                timerDisplayInterval = setInterval(updateTimerDisplay, 1000);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('timerDisplay');
+            if (display && state.activeTimerStart) {
+                const now = Math.floor(Date.now() / 1000);
+                const elapsed = now - state.activeTimerStart;
+                display.innerText = formatTime(elapsed);
+            }
+        }
+
+        function toggleTimer(dateKey, walkId) {
+            const walk = state.walks[dateKey].find(w => w.id === walkId);
+            if (!walk || walk.status === 'completed') return;
+
+            if (walk.status === 'pending') {
+                const isToday = dateKey === formatDateKey(new Date());
+                if (!isToday) {
+                    alert("Solo puedes iniciar el cronómetro para los paseos de hoy.");
+                    return;
+                }
+                if (state.activeTimerId) {
+                    alert("Ya hay un paseo en curso.");
+                    return;
+                }
+                walk.status = 'active';
+                state.activeTimerId = walkId;
+                state.activeTimerStart = Math.floor(Date.now() / 1000);
+                saveData();
+                openTimerModal(dateKey, walkId);
+            } else if (walk.status === 'active') {
+                clearInterval(timerDisplayInterval);
+                const now = Math.floor(Date.now() / 1000);
+                const elapsed = now - state.activeTimerStart;
+                
+                walk.duration = elapsed;
+                walk.status = 'completed';
+                walk.completedBy = state.currentUser.username;
+                state.activeTimerId = null;
+                state.activeTimerStart = null;
+                
+                let minReqSeconds = walk.type === 'Corto' ? MIN_SHORT_WALK : MIN_LONG_WALK;
+                if (walk.duration < minReqSeconds) {
+                    notifyAdmins(`⚠️ [ALERTA] El paseo asignado a ${walk.walker} (${walk.type}) duró solo ${Math.floor(walk.duration/60)} minutos el ${dateKey} a las ${walk.time}.`);
+                }
+                saveData();
+                openTimerModal(dateKey, walkId);
+            }
+        }
+
+        function adminSaveTime(dateKey, walkId) {
+            const walk = state.walks[dateKey].find(w => w.id === walkId);
+            const val = document.getElementById('adminTimeOverride').value;
+            
+            const parts = val.split(':').reverse();
+            let seconds = 0;
+            if (parts[0]) seconds += parseInt(parts[0], 10) || 0;
+            if (parts[1]) seconds += (parseInt(parts[1], 10) || 0) * 60;
+            if (parts[2]) seconds += (parseInt(parts[2], 10) || 0) * 3600;
+
+            walk.duration = seconds;
+            saveData();
+            openTimerModal(dateKey, walkId);
+        }
+
+        function adminResetTimer(dateKey, walkId) {
+            const walk = state.walks[dateKey].find(w => w.id === walkId);
+            walk.status = 'pending';
+            walk.duration = 0;
+            walk.completedBy = null;
+            saveData();
+            openTimerModal(dateKey, walkId);
+        }
+
+        function openSwapModal(originDateKey, originWalkId) {
+            const originWalk = state.walks[originDateKey].find(w => w.id === originWalkId);
+            let possibleSwaps = [];
+            let checkDate = new Date(); 
+            
+            for (let i = 0; i < 14; i++) {
+                const dKey = formatDateKey(checkDate);
+                const dayOfWeek = checkDate.getDay();
+
+                if (!state.walks[dKey]) {
+                    const defaultForDay = state.defaultSchedule[dayOfWeek] || [];
+                    if (defaultForDay.length > 0) {
+                        state.walks[dKey] = defaultForDay.map(d => ({
+                            id: generateId(), time: d.time, walker: d.walker, type: d.type, status: 'pending', duration: 0
+                        }));
+                    }
+                }
+
+                (state.walks[dKey] || []).forEach(w => {
+                    if (w.status === 'pending' && w.type === originWalk.type && w.id !== originWalk.id) {
+                        if (state.currentUser.role === 'admin' || w.walker !== state.currentUser.username) {
+                            possibleSwaps.push({ dateKey: dKey, walk: w });
+                        }
+                    }
+                });
+                checkDate.setDate(checkDate.getDate() + 1);
+            }
+            
+            saveData(); 
+
+            const modalRoot = document.getElementById('modal-root');
+            modalRoot.innerHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div class="absolute inset-0 modal-overlay" onclick="closeModal()"></div>
+                    <div class="glass-panel w-full max-w-md rounded-3xl p-6 relative z-10 animate-fade-in text-left border border-indigo-500/30 flex flex-col max-h-[80vh]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-white">Cambiar Turno</h3>
+                            <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                        </div>
+                        
+                        <p class="text-sm text-slate-400 mb-4">Selecciona un paseo equivalente (Tipo ${originWalk.type}) por el que quieras intercambiar tu turno del <strong class="text-indigo-300">${originDateKey} a las ${originWalk.time}</strong>.</p>
+                        
+                        <div class="overflow-y-auto pr-2 space-y-2 flex-1">
+                            ${possibleSwaps.length === 0 ? `
+                                <div class="text-center p-6 text-slate-500 text-sm">No hay paseos compatibles disponibles.</div>
+                            ` : possibleSwaps.map(s => `
+                                <div onclick="processSwap('${originDateKey}', '${originWalkId}', '${s.dateKey}', '${s.walk.id}', '${s.walk.walker}')" class="glass-button p-3 rounded-xl cursor-pointer flex justify-between items-center border border-white/5 hover:border-indigo-400">
+                                    <div>
+                                        <div class="text-white font-bold text-sm">${s.dateKey}</div>
+                                        <div class="text-xs text-slate-400 mt-0.5"><i class="ph ph-clock"></i> ${s.walk.time} - <i class="ph ph-user"></i> ${s.walk.walker}</div>
+                                    </div>
+                                    <i class="ph ph-arrows-left-right text-indigo-400 text-lg"></i>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function processSwap(originDateKey, originWalkId, targetDateKey, targetWalkId, targetUser) {
+            const originWalk = state.walks[originDateKey].find(w => w.id === originWalkId);
+            const targetWalk = state.walks[targetDateKey].find(w => w.id === targetWalkId);
+
+            const detailsOrigin = `${originDateKey} a las ${originWalk.time} (${originWalk.type})`;
+            const detailsTarget = `${targetDateKey} a las ${targetWalk.time} (${targetWalk.type})`;
+
+            if (state.currentUser.role === 'admin') {
+                const tempWalker = originWalk.walker;
+                originWalk.walker = targetWalk.walker;
+                targetWalk.walker = tempWalker;
+                
+                addNotification(originWalk.walker, 'info', `El Admin reasignó tu paseo: Ahora tienes el ${detailsOrigin}.`);
+                if(originWalk.walker !== targetWalk.walker) {
+                    addNotification(targetWalk.walker, 'info', `El Admin reasignó tu paseo: Ahora tienes el ${detailsTarget}.`);
+                }
+                saveData();
+                closeModal();
+            } else {
+                const reqId = generateId();
+                state.swapRequests.push({
+                    id: reqId, fromUser: state.currentUser.username, toUser: targetUser,
+                    fromDate: originDateKey, toDate: targetDateKey, fromWalkId: originWalkId, toWalkId: targetWalkId, status: 'pending'
+                });
+                
+                addNotification(targetUser, 'swap_req', `${state.currentUser.username} propone un cambio: Hará tu paseo del ${detailsTarget} si haces el suyo del ${detailsOrigin}.`, reqId);
+                saveData();
+                closeModal();
+                alert("Solicitud enviada mediante la nube.");
+            }
+        }
+
+        function handleSwapResponse(reqId, accepted) {
+            const req = state.swapRequests.find(r => r.id === reqId);
+            if (!req) return;
+
+            req.status = accepted ? 'accepted' : 'rejected';
+            
+            if (accepted) {
+                const w1 = (state.walks[req.fromDate] || []).find(w => w.id === req.fromWalkId);
+                const w2 = (state.walks[req.toDate] || []).find(w => w.id === req.toWalkId);
+                
+                if (w1 && w2 && w1.status === 'pending' && w2.status === 'pending') {
+                    w1.walker = req.toUser;
+                    w2.walker = req.fromUser;
+                    
+                    addNotification(req.fromUser, 'success', `${req.toUser} ha ACEPTADO el cambio. Ahora haces el paseo del ${req.toDate} a las ${w2.time}.`);
+                    addNotification(req.toUser, 'success', `Aceptaste el cambio. Ahora haces el paseo del ${req.fromDate} a las ${w1.time}.`);
+                } else {
+                    addNotification(req.fromUser, 'alert', `El cambio con ${req.toUser} falló porque un paseo ya no está disponible.`);
+                }
+            } else {
+                addNotification(req.fromUser, 'alert', `${req.toUser} ha RECHAZADO tu propuesta de cambio.`);
+            }
+
+            state.swapRequests = state.swapRequests.filter(r => r.id !== reqId);
+            const notif = state.notifications.find(n => n.relatedReqId === reqId);
+            if(notif) notif.relatedReqId = null; 
+
+            saveData();
+            openNotifications(); 
+        }
+
+        function openNotifications() {
+            const modalRoot = document.getElementById('modal-root');
+            let myNotifs = state.notifications.filter(n => n.userId === state.currentUser.username);
+            myNotifs.forEach(n => n.read = true);
+            saveData();
+            
+            modalRoot.innerHTML = `
+                <div class="fixed inset-0 z-50 flex justify-end p-4 sm:p-6">
+                    <div class="absolute inset-0 modal-overlay" onclick="closeModal()"></div>
+                    <div class="glass-panel w-full max-w-sm rounded-3xl p-6 relative z-10 animate-fade-in text-left border border-indigo-500/30 h-full flex flex-col shadow-2xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="ph ph-bell text-indigo-400"></i> Notificaciones</h3>
+                            <button onclick="closeModal()" class="text-slate-400 hover:text-white bg-white/5 p-2 rounded-xl"><i class="ph ph-x"></i></button>
+                        </div>
+                        
+                        <div class="overflow-y-auto space-y-3 flex-1 pr-2">
+                            ${myNotifs.length === 0 ? `
+                                <div class="text-center p-6 text-slate-500 text-sm">No tienes notificaciones.</div>
+                            ` : myNotifs.map(n => {
+                                const icons = { alert: 'ph-warning text-red-400', info: 'ph-info text-blue-400', success: 'ph-check-circle text-emerald-400', swap_req: 'ph-arrows-left-right text-purple-400' };
+                                const bgs = { alert: 'bg-red-900/10 border-red-500/20', info: 'bg-blue-900/10 border-blue-500/20', success: 'bg-emerald-900/10 border-emerald-500/20', swap_req: 'bg-purple-900/10 border-purple-500/20' };
+                                
+                                return `
+                                <div class="p-4 rounded-2xl border ${bgs[n.type] || 'bg-white/5 border-white/10'}">
+                                    <div class="flex gap-3">
+                                        <i class="ph ${icons[n.type] || 'ph-bell'} text-xl mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm text-slate-300">${n.message}</p>
+                                            <div class="text-xs text-slate-500 mt-2">${new Date(n.timestamp).toLocaleString('es-ES')}</div>
+                                            
+                                            ${n.type === 'swap_req' && n.relatedReqId ? `
+                                                <div class="flex gap-2 mt-3">
+                                                    <button onclick="handleSwapResponse('${n.relatedReqId}', false)" class="flex-1 py-2 px-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-bold transition-colors border border-red-500/30">Rechazar</button>
+                                                    <button onclick="handleSwapResponse('${n.relatedReqId}', true)" class="flex-1 py-2 px-3 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-xs font-bold transition-colors border border-emerald-500/30">Aceptar</button>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function renderStats() {
-            const names = allUsers.map(u => u.name);
-            // Si el paseo lo hacen varias personas separadas por " + ", se le suma a todos los participantes
-            const counts = names.map(n => allWalks.filter(w => w.walker.split(' + ').includes(n)).length);
-            const times = names.map(n => allWalks.filter(w => w.walker.split(' + ').includes(n)).reduce((a,b) => a + b.duration, 0));
-            
-            if (charts.w) charts.w.destroy();
-            if (charts.t) charts.t.destroy();
-            
-            const optWalks = { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } }, 
-                scales: { 
-                    y: { beginAtZero: true, ticks: { font: { size: 9, weight: 'bold' } }, grid: { display: false } }, 
-                    x: { ticks: { font: { size: 9, weight: 'bold' } }, grid: { display: false } } 
-                } 
-            };
+            const stats = {};
+            state.users.forEach(u => {
+                stats[u.username] = { minutes: 0, count: 0, name: u.username };
+            });
 
-            const optTime = { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let mins = context.raw;
-                                let h = Math.floor(mins / 60);
-                                let m = mins % 60;
-                                let timeStr = "";
-                                if (h > 0) timeStr += h + "h ";
-                                if (m > 0 || h === 0) timeStr += m + "min";
-                                return "Total: " + timeStr;
-                            }
-                        }
+            Object.values(state.walks).forEach(dayWalks => {
+                dayWalks.forEach(walk => {
+                    if (walk.status === 'completed') {
+                        const walker = walk.walker;
+                        if (!stats[walker]) stats[walker] = { minutes: 0, count: 0, name: walker };
+                        stats[walker].minutes += Math.floor(walk.duration / 60);
+                        stats[walker].count += 1;
                     }
-                }, 
-                scales: { 
-                    y: { beginAtZero: true, ticks: { font: { size: 9, weight: 'bold' } }, grid: { display: false } }, 
-                    x: { ticks: { font: { size: 9, weight: 'bold' } }, grid: { display: false } } 
-                } 
-            };
+                });
+            });
 
-            charts.w = new Chart(document.getElementById('chartWalks'), { type: 'bar', data: { labels: names, datasets: [{ data: counts, backgroundColor: '#7dd3fc', borderRadius: 6 }] }, options: optWalks });
-            charts.t = new Chart(document.getElementById('chartTime'), { type: 'bar', data: { labels: names, datasets: [{ data: times, backgroundColor: '#38bdf8', borderRadius: 6 }] }, options: optTime });
+            const usersData = Object.values(stats).filter(u => u.count > 0 || state.users.find(x => x.username === u.name));
+            const byMinutes = [...usersData].sort((a, b) => b.minutes - a.minutes);
+            const byCount = [...usersData].sort((a, b) => b.count - a.count);
+
+            const maxMins = Math.max(...usersData.map(u => u.minutes), 1);
+            const maxCount = Math.max(...usersData.map(u => u.count), 1);
+
+            return `
+                <div class="space-y-8 text-left animate-fade-in">
+                    <div class="glass-panel p-6 sm:p-8 rounded-3xl relative overflow-hidden">
+                        <div class="absolute -right-10 -top-10 opacity-5"><i class="ph ph-chart-polar text-9xl"></i></div>
+                        <h3 class="text-2xl font-bold text-white mb-2 relative z-10 flex items-center gap-2"><i class="ph ph-chart-bar text-indigo-400"></i> Estadísticas Globales</h3>
+                        <p class="text-slate-400 text-sm mb-8 relative z-10">Rendimiento histórico sincronizado en la nube.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                            <div class="bg-black/30 p-5 sm:p-6 rounded-2xl border border-white/5 shadow-inner">
+                                <h4 class="text-sm font-bold text-indigo-400 uppercase tracking-wider mb-6 flex items-center gap-2">
+                                    <i class="ph ph-clock text-lg"></i> Minutos Totales
+                                </h4>
+                                <div class="space-y-5">
+                                    ${byMinutes.map(u => {
+                                        const pct = (u.minutes / maxMins) * 100;
+                                        return `
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1.5">
+                                                <span class="text-white font-medium">${u.name}</span>
+                                                <span class="text-indigo-300 font-bold">${u.minutes} min</span>
+                                            </div>
+                                            <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-white/5">
+                                                <div class="bg-gradient-to-r from-indigo-600 to-indigo-400 h-3 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.5)] transition-all duration-1000 ease-out" style="width: ${pct}%"></div>
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+
+                            <div class="bg-black/30 p-5 sm:p-6 rounded-2xl border border-white/5 shadow-inner">
+                                <h4 class="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-6 flex items-center gap-2">
+                                    <i class="ph ph-hash text-lg"></i> Cantidad de Paseos
+                                </h4>
+                                <div class="space-y-5">
+                                    ${byCount.map(u => {
+                                        const pct = (u.count / maxCount) * 100;
+                                        return `
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1.5">
+                                                <span class="text-white font-medium">${u.name}</span>
+                                                <span class="text-emerald-300 font-bold">${u.count} paseos</span>
+                                            </div>
+                                            <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-white/5">
+                                                <div class="bg-gradient-to-r from-emerald-600 to-emerald-400 h-3 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000 ease-out" style="width: ${pct}%"></div>
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        window.addEventListener('load', initAuth);
+        function renderAdmin() {
+            if (state.currentUser.role !== 'admin') return '<p class="text-center text-red-500">Acceso denegado.</p>';
+            
+            const daysMap = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 0: 'Domingo' };
+            const weekdayKeys = [1, 2, 3, 4, 5];
+            const weekendKeys = [6, 0];
+
+            function renderColumn(dayNum) {
+                const slots = state.defaultSchedule[dayNum] || [];
+                slots.sort((a, b) => a.time.localeCompare(b.time));
+                
+                return `
+                    <div class="bg-black/20 p-3 rounded-2xl border border-white/5 min-w-[200px] flex-1">
+                        <h4 class="text-sm font-bold text-slate-300 text-center mb-4 uppercase tracking-wider">${daysMap[dayNum]}</h4>
+                        <div class="space-y-2 mb-3">
+                            ${slots.map(s => `
+                                <div class="bg-white/5 p-2 rounded-xl text-xs border border-white/10 relative group">
+                                    <div class="font-bold text-indigo-300">${s.time} <span class="text-slate-500 font-normal ml-1">(${s.type})</span></div>
+                                    <div class="text-slate-300"><i class="ph ph-user"></i> ${s.walker}</div>
+                                    <button onclick="deleteDefaultSlot(${dayNum}, '${s.id}')" class="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><i class="ph ph-trash"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="openDefaultSlotModal(${dayNum})" class="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-semibold text-slate-400 transition-colors border border-dashed border-white/20">
+                            + Añadir
+                        </button>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="space-y-8 text-left animate-fade-in">
+                    <div class="glass-panel p-6 rounded-3xl border border-indigo-500/20">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2"><i class="ph ph-users text-indigo-400"></i> Gestión de Usuarios</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="md:col-span-1 bg-black/30 p-5 rounded-2xl border border-white/5 h-fit">
+                                <h4 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-wider">Crear Usuario</h4>
+                                <form onsubmit="handleCreateUser(event)" class="space-y-3">
+                                    <input type="text" id="newUsername" placeholder="Nombre" required class="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                                    <input type="password" inputmode="numeric" pattern="[0-9]*" id="newPin" placeholder="PIN Numérico" required class="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                                    <select id="newRole" class="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                                        <option value="user">Paseador (Usuario)</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-sm transition-colors mt-2">Guardar Usuario</button>
+                                </form>
+                            </div>
+
+                            <div class="md:col-span-2 bg-black/30 p-5 rounded-2xl border border-white/5">
+                                <h4 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-wider">Lista de Usuarios</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${state.users.map(u => `
+                                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+                                                    <i class="ph ph-${u.role === 'admin' ? 'shield-star text-indigo-400' : 'user text-slate-400'}"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-bold text-white">${u.username}</div>
+                                                    <div class="text-xs text-slate-500">${u.role}</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button onclick="openResetPinModal('${u.username}')" class="p-1.5 text-slate-400 hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg transition-colors" title="Restablecer PIN">
+                                                    <i class="ph ph-key text-lg"></i>
+                                                </button>
+                                                ${u.username !== state.currentUser.username ? `
+                                                    <button onclick="deleteUser('${u.username}')" class="p-1.5 text-slate-400 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                                        <i class="ph ph-trash text-lg"></i>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-3xl border border-purple-500/20">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                            <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="ph ph-calendar-plus text-purple-400"></i> Horarios Predeterminados</h3>
+                            <p class="text-xs text-slate-400 mt-1 sm:mt-0 max-w-sm">Estos paseos se añadirán automáticamente al calendario cada semana.</p>
+                        </div>
+                        
+                        <h4 class="text-sm font-bold text-indigo-400 mb-3 mt-6 uppercase tracking-wider flex items-center gap-2"><i class="ph ph-briefcase"></i> Días Laborables</h4>
+                        <div class="flex overflow-x-auto gap-4 pb-4 snap-x">
+                            ${weekdayKeys.map(d => renderColumn(d)).join('')}
+                        </div>
+
+                        <h4 class="text-sm font-bold text-emerald-400 mb-3 mt-6 uppercase tracking-wider flex items-center gap-2"><i class="ph ph-martini"></i> Fin de Semana</h4>
+                        <div class="flex overflow-x-auto gap-4 pb-4 snap-x">
+                            ${weekendKeys.map(d => renderColumn(d)).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleCreateUser(e) {
+            e.preventDefault();
+            const u = document.getElementById('newUsername').value.trim();
+            const p = document.getElementById('newPin').value.trim();
+            const r = document.getElementById('newRole').value;
+            
+            if (state.users.find(x => x.username.toLowerCase() === u.toLowerCase())) {
+                alert('El usuario ya existe');
+                return;
+            }
+            
+            state.users.push({ username: u, pin: p, role: r });
+            saveData();
+        }
+
+        function deleteUser(username) {
+            state.users = state.users.filter(u => u.username !== username);
+            saveData();
+        }
+
+        function openResetPinModal(username) {
+            const modalRoot = document.getElementById('modal-root');
+            modalRoot.innerHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div class="absolute inset-0 modal-overlay" onclick="closeModal()"></div>
+                    <div class="glass-panel w-full max-w-sm rounded-3xl p-6 relative z-10 animate-fade-in text-left border border-blue-500/30">
+                        <h3 class="text-xl font-bold text-white mb-2">Restablecer PIN</h3>
+                        <p class="text-sm text-slate-400 mb-4">Nuevo PIN numérico para <strong class="text-blue-300">${username}</strong></p>
+                        <input type="password" inputmode="numeric" pattern="[0-9]*" id="resetPinValue" placeholder="Escribe el nuevo PIN" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 mb-4">
+                        <div class="flex gap-3">
+                            <button onclick="closeModal()" class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-sm font-bold text-slate-300 transition-colors">Cancelar</button>
+                            <button onclick="saveResetPin('${username}')" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-blue-500/30">Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveResetPin(username) {
+            const newPin = document.getElementById('resetPinValue').value.trim();
+            if(!newPin) return;
+
+            const user = state.users.find(u => u.username === username);
+            if(user) {
+                user.pin = newPin;
+                saveData();
+                closeModal();
+            }
+        }
+
+        function openDefaultSlotModal(dayNum) {
+            const modalRoot = document.getElementById('modal-root');
+            const usersOpts = state.users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+            const daysMap = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 0: 'Domingo' };
+
+            modalRoot.innerHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div class="absolute inset-0 modal-overlay" onclick="closeModal()"></div>
+                    <div class="glass-panel w-full max-w-sm rounded-3xl p-6 relative z-10 animate-fade-in text-left border border-purple-500/30">
+                        <h3 class="text-xl font-bold text-white mb-1">Añadir Predeterminado</h3>
+                        <p class="text-sm text-slate-400 mb-4">Fijar paseo para todos los <strong class="text-purple-300">${daysMap[dayNum]}</strong></p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Hora</label>
+                                <input type="time" id="defTime" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500 focus:outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Paseador</label>
+                                <select id="defWalker" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500 focus:outline-none">
+                                    ${usersOpts}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Tipo</label>
+                                <select id="defType" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-purple-500 focus:outline-none">
+                                    <option value="Corto">Corto</option>
+                                    <option value="Largo">Largo</option>
+                                </select>
+                            </div>
+                            <div class="pt-2 flex gap-3">
+                                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl text-slate-300 bg-white/5 hover:bg-white/10 font-bold transition-all">Cancelar</button>
+                                <button onclick="saveDefaultSlot(${dayNum})" class="flex-1 py-3 rounded-xl text-white bg-purple-600 hover:bg-purple-500 font-bold shadow-lg shadow-purple-500/30 transition-all">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveDefaultSlot(dayNum) {
+            const time = document.getElementById('defTime').value;
+            const walker = document.getElementById('defWalker').value;
+            const type = document.getElementById('defType').value;
+            
+            if (!time) return;
+
+            if (!state.defaultSchedule[dayNum]) state.defaultSchedule[dayNum] = [];
+            state.defaultSchedule[dayNum].push({ id: generateId(), time, walker, type });
+            
+            if (walker !== state.currentUser.username) {
+                const daysMap = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 0: 'Domingo' };
+                addNotification(walker, 'info', `Se te asignó un paseo recurrente (${type}) todos los ${daysMap[dayNum]} a las ${time}.`);
+            }
+
+            saveData();
+            closeModal();
+        }
+
+        function deleteDefaultSlot(dayNum, slotId) {
+            const slot = state.defaultSchedule[dayNum].find(s => s.id === slotId);
+            if (slot && slot.walker !== state.currentUser.username) {
+                const daysMap = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 0: 'Domingo' };
+                addNotification(slot.walker, 'alert', `Se ha cancelado tu paseo recurrente de los ${daysMap[dayNum]} a las ${slot.time}.`);
+            }
+            
+            state.defaultSchedule[dayNum] = state.defaultSchedule[dayNum].filter(s => s.id !== slotId);
+            saveData();
+        }
+
+        function closeModal() {
+            document.getElementById('modal-root').innerHTML = '';
+            if (state.activeTimerId) {
+                clearInterval(timerDisplayInterval);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+        });
+
+        // Soporte de teclado numérico para PIN
+        window.addEventListener('keydown', (e) => {
+            if (state.view === 'login' && loginState.step === 'pin') {
+                if (e.key >= '0' && e.key <= '9') handlePinInput(e.key);
+                else if (e.key === 'Backspace') handlePinBackspace();
+                else if (e.key === 'Enter') handlePinSubmit();
+            }
+        });
+
+        // Exponer funciones necesarias al scope global
+        window.handleFirstAdmin = handleFirstAdmin;
+        window.handleLoginUser = handleLoginUser;
+        window.handlePinInput = handlePinInput;
+        window.handlePinBackspace = handlePinBackspace;
+        window.handlePinSubmit = handlePinSubmit;
+        window.changeDay = changeDay;
+        window.openAddWalkModal = openAddWalkModal;
+        window.closeModal = closeModal;
+        window.saveNewWalk = saveNewWalk;
+        window.openTimerModal = openTimerModal;
+        window.toggleTimer = toggleTimer;
+        window.adminSaveTime = adminSaveTime;
+        window.adminResetTimer = adminResetTimer;
+        window.openSwapModal = openSwapModal;
+        window.processSwap = processSwap;
+        window.handleSwapResponse = handleSwapResponse;
+        window.openNotifications = openNotifications;
+        window.handleCreateUser = handleCreateUser;
+        window.deleteUser = deleteUser;
+        window.openResetPinModal = openResetPinModal;
+        window.saveResetPin = saveResetPin;
+        window.openDefaultSlotModal = openDefaultSlotModal;
+        window.saveDefaultSlot = saveDefaultSlot;
+        window.deleteDefaultSlot = deleteDefaultSlot;
+        window.logout = logout;
     </script>
 </body>
 </html>
